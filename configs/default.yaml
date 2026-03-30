@@ -1,0 +1,10 @@
+# CPI measurement defaults (protocol knobs — not empirical findings).
+# Tie changes to hypothesis.md / pre-registration_paper.md when you freeze a run.
+
+seed: 0
+k_atol: 0.15
+coverage_tau: 0.65
+n_relevant_states: 40
+interventions_per_state: 8
+# Synthetic demo only: probability a mock "interpretation" matches the true effect
+synthetic_interpreter_accuracy: 0.72

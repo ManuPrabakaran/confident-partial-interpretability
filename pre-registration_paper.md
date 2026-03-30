@@ -8,7 +8,7 @@ Rice University · mp228@rice.edu
 
 We introduce Confident Partial Interpretability (CPI), a measurement framework for quantifying how much of a neural network’s internal behavior is currently interpretable and how reliably those interpretations generalize under causal intervention. CPI defines two core metrics: Coverage (C), the fraction of causally relevant internal states for which a reliable interpretation exists, and Confidence (K), the probability that a given interpretation correctly predicts model behavior under causal intervention.
 
-CPI argues that sufficiently confident interpretability over a bounded domain is enough to make alignment tractable within that domain—converting it from an open philosophical problem into a monitoring and enforcement problem with measurable guarantees. We further hypothesize that C and K degrade along a predictable Interpretability Scaling Law with model complexity, analogous to capability scaling laws. If true, this would allow forecasting of how much interpretability we can expect from models of a given effective dimensionality and how much capability can safely be permitted under a CPI-style whitelist.
+CPI argues that sufficiently confident interpretability over a bounded domain is enough to make alignment tractable within that domain—converting it from an open philosophical problem into a monitoring and enforcement problem with empirically grounded guarantees. We further hypothesize that C and K degrade along a predictable Interpretability Scaling Law with model complexity, analogous to capability scaling laws. If true, this would allow forecasting of how much interpretability we can expect from models of a given effective dimensionality and how much capability can safely be permitted under a CPI-style whitelist.
 
 This document pre-registers the CPI framework, its measurement methodology, and its central scaling-law hypothesis prior to empirical validation. No empirical results are reported.
 
@@ -206,6 +206,8 @@ In practice:
 - Sample layer ℓ and token position t uniformly or according to activation salience  
 - Estimate relevance via randomized interventions  
 
+Sampling is performed over (ℓ, t, x) where x is drawn from D, ensuring that sampled states reflect the distribution of causally active computation under deployment conditions.
+
 ---
 
 ## 8. Domain Restriction Mechanism
@@ -251,6 +253,8 @@ If K → 1 over a domain and the model is restricted to that domain, then:
 - Control is possible through steering  
 
 Alignment becomes a bounded engineering problem involving coverage expansion, robustness under distribution shift, and capability tradeoffs.
+
+This claim holds relative to the correctness and completeness of the interpretability function f over the deployed domain.
 
 ---
 

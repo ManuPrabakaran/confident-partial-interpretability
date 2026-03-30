@@ -4,12 +4,11 @@
 
 The core thesis is that we may not need complete interpretability to make meaningful progress on alignment. Instead, it may be enough to identify and operate within the subset of model states that are interpretable with sufficient confidence, while restricting or blocking transitions into states that are not.
 
-This repository contains:
-- a formal project writeup,
-- a hypothesis document,
-- toy model experiments,
-- interpretability and intervention tests,
-- and early empirical measurements of **coverage** and **confidence**.
+This repository currently contains:
+- **`pre-registration_paper.md`** — full CPI framework, measurement methodology, limits of the claims, and a **testable** interpretability scaling-law conjecture (no empirical results reported).
+- **`hypothesis.md`** — compact pre-experiment predictions, pipeline sketch, and success/failure criteria (**no scaling law assumed a priori** for those gates; no results claimed).
+
+The repo includes **measurement scaffolding** (`metrics/`, `configs/`, `experiments/synthetic_demo.py`) plus **CI**; real model training and interventions are stubbed for the next implementation pass.
 
 ## Thesis
 
@@ -23,6 +22,8 @@ Rather than asking whether interpretability solves alignment in the abstract, CP
 
 > Can a model be made safe enough for deployment by operating only inside regions where its internal state is interpretable and causally legible?
 
+CPI does **not** assume that interpretability alone is globally sufficient for alignment. Sufficiently confident interpretability over a **bounded** domain is claimed to make alignment **operationally tractable within that domain** only; see `pre-registration_paper.md` Section 4 for caveats (aliasing, composition, deception inside the monitored region, and more).
+
 ## Why this matters
 
 A major challenge in alignment is that we do not know how to reliably read a model’s internal state from its weights and activations. CPI treats that as an engineering problem rather than a philosophical one.
@@ -35,49 +36,61 @@ If we can measure when an interpretation is reliable and how much of a model is 
 
 ## Core concepts
 
-CPI is built around two measurements:
+CPI is built around two measurements (definitions and protocol details are in `pre-registration_paper.md`):
 
-### Coverage
-The fraction of a model’s internal states or behaviors for which we can produce a meaningful interpretation.
+### Coverage (C)
 
-### Confidence
-The reliability of that interpretation under causal intervention.
+The fraction of **causally relevant** internal states for which a **reliable** interpretation exists (under the chosen task and sampling scheme).
 
-A high-confidence interpretation should predict what happens when we ablate, patch, steer, or otherwise modify the relevant internal components.
+### Confidence (K)
+
+The probability that an interpretation **correctly predicts** model behavior under **causal intervention** (e.g. ablation, patching, steering), relative to a specified divergence tolerance.
+
+A high-confidence interpretation should predict distributional shifts in outputs when relevant internal components are intervened on—not merely correlate with behavior.
 
 ## Working hypothesis
 
-The project begins from the hypothesis that:
+The project starts from the hypotheses summarized in `hypothesis.md`:
 
 1. Some model states are more interpretable than others.
-2. Interpretability can be measured empirically.
-3. Interpretability degrades in predictable ways as models become more complex.
-4. Safety can be improved by restricting training or deployment to states where interpretability remains strong.
+2. Interpretability can be operationalized and measured via **C** and **K** under an explicit intervention protocol.
+3. Restricting the model to high-confidence regions (CPI-style domain restriction) can **measurably constrain behavior**; **capability retention is not assumed** (see `hypothesis.md`, Prediction 3).
+4. The **pre-registration paper** additionally advances an **interpretability scaling-law conjecture** (how **C** and **K** may vary with effective complexity). That is a **hypothesis to test**, not a premise of the short pre-experiment document.
 
 If these claims hold even partially, CPI may provide a practical pathway toward safer deployment of capable systems.
 
 ## Research questions
 
-This project is organized around a small set of concrete questions:
-
-- How much of a model’s behavior can be explained by mechanistic interpretability methods?
-- Does a confident interpretation actually predict causal effects under intervention?
-- How stable are these interpretations across prompts, seeds, and checkpoints?
-- Does interpretability degrade as model size or task complexity increases?
-- Is there a measurable tradeoff between interpretability coverage and capability?
+- How much of a model’s **causally relevant** behavior can be covered by interpretations that pass a **K** threshold?
+- Does measured **K** actually predict intervention outcomes on held-out states or interventions?
+- How stable are **C** and **K** across prompts, seeds, and checkpoints?
+- Under domain restriction, do outputs change in ways **consistent with** the interpretability mapping **f**?
+- (From the pre-registration paper) If scaling experiments are run: do **C** and **K** follow a predictable relationship with effective dimensionality?
 
 ## Experimental program
 
-The initial experiments focus on controlled toy settings where ground truth is known or partially known.
+The initial plan (see `hypothesis.md`) is:
 
-Planned directions include:
-- training small transformer or MLP models on synthetic tasks,
-- reverse-engineering internal circuits,
-- applying activation patching, ablation, and probing methods,
-- measuring intervention prediction accuracy,
-- and comparing results across model sizes and training checkpoints.
+- small transformers (on the order of 1–2 layers to start),
+- a simple, mechanistically analyzable task,
+- sampling **(layer ℓ, token position t, input x)** from the task distribution **D**,
+- relevance via intervention, then **K** from prediction vs observed intervention effects, then **C** as the fraction of relevant states with **K ≥ τ**.
 
-If these experiments produce strong signals, the same framework can be extended to more realistic language-model settings.
+If these experiments produce strong signals, the same framework can be extended to richer settings.
+
+## Code quickstart
+
+```bash
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+pytest -q
+python experiments/synthetic_demo.py
+```
+
+- **`synthetic_demo.py`** — end-to-end **toy** run: simulates intervention predictions vs “true” effects, writes `outputs/synthetic_demo.json`. The JSON includes an explicit **synthetic** disclaimer; it is **not** an empirical CPI result.
+- **`configs/default.yaml`** — protocol knobs (τ, atol, sample counts) to freeze when you run real experiments.
+- **`.github/workflows/ci.yml`** — installs the package, runs **pytest**, runs the synthetic demo.
 
 ## Repository layout
 
@@ -85,89 +98,77 @@ If these experiments produce strong signals, the same framework can be extended 
 .
 ├── README.md
 ├── hypothesis.md
-├── paper/
-│   └── draft.md
-├── experiments/
-│   ├── train_toy_models.py
-│   ├── eval_interpretability.py
-│   ├── ablation_tests.py
-│   └── scaling_study.py
+├── pre-registration_paper.md
+├── pyproject.toml
+├── configs/
+│   └── default.yaml
 ├── metrics/
-│   ├── confidence.py
-│   └── coverage.py
-├── notebooks/
-│   └── quick_demo.ipynb
-├── outputs/
-│   ├── figures/
-│   └── tables/
-└── tests/
+│   ├── confidence.py    # K (§6)
+│   └── coverage.py      # C (§7)
+├── experiments/
+│   ├── synthetic_demo.py
+│   ├── train_toy_model.py   # stub
+│   └── interventions.py     # stub
+├── tests/
+│   └── test_metrics.py
+├── outputs/             # run artifacts (json gitignored)
+└── .github/workflows/
+    └── ci.yml
 ```
 
 ## File roles
 
-- `README.md`: project overview and research framing.
-- `hypothesis.md`: pre-experiment claims, predictions, and falsification criteria.
-- `paper/draft.md`: the evolving manuscript.
-- `experiments/`: training and evaluation scripts.
-- `metrics/`: confidence and coverage calculations.
-- `outputs/`: plots, tables, and experiment artifacts.
-- `tests/`: checks for reproducibility and metric sanity.
+- **`README.md`** — project overview aligned with the pre-registration and hypothesis documents.
+- **`hypothesis.md`** — pre-experiment predictions, validation criteria (**success if any** / **failure if all**), and explicit note that **no results are claimed** there.
+- **`pre-registration_paper.md`** — full CPI pre-registration: metrics, methodology, enforcement sketch, scaling-law hypothesis, and references.
+- **`metrics/`** — reference implementations of **K** and **C** matching the paper’s definitions (extend for your divergence metric of choice).
+- **`experiments/synthetic_demo.py`** — sanity-check the metric pipeline before PyTorch work exists.
 
 ## What counts as success
 
-A useful CPI result would show:
-- a clear relationship between internal structure and behavior,
-- a reproducible confidence metric that tracks intervention outcomes,
-- measurable coverage on at least one controlled benchmark,
-- and evidence that these quantities change systematically with model complexity.
+Aligned with `hypothesis.md`, the experimental program is judged **successful if any** of the following hold:
 
-Even a negative result would be valuable if it shows that confident interpretability is too unstable, too sparse, or too expensive to support safe deployment.
+- **K** predicts intervention outcomes on sampled states.
+- **C** or **K** improves with better interpretability methods (or the tractable domain expands).
+- Domain restriction **constrains behavior** in ways consistent with **f**.
+- **C** / **K** provide useful guidance for research direction (operationalize as you tighten the program).
+
+**Failure** is only registered if **all** of the corresponding negative conditions in `hypothesis.md` hold—see that file for the exact list.
+
+Even a negative result is valuable if it shows that confident interpretability is too unstable, too sparse, or too expensive to support deployment-style control.
 
 ## Why this repo is different
 
 This project is not just another interpretability demo.
 
-It is an attempt to turn interpretability into a **safety-relevant control framework** by separating the problem into:
+It is an attempt to turn interpretability into a **safety-relevant control framework** by separating:
 - what we can understand,
-- how reliably we understand it,
-- and how much of the model remains within that understandable region.
+- how reliably we understand it (**K**),
+- and how much of the relevant state space that covers (**C**).
 
-That distinction matters because it turns a vague safety aspiration into a testable empirical program.
+That distinction matters because it turns a vague safety aspiration into a testable empirical program—with explicit limits on what is guaranteed (again, see Section 4 of the pre-registration paper).
 
-## Preliminary Results
+## Status
 
-Across toy transformer models of increasing complexity trained on modular arithmetic:
+**No empirical results on real models are reported yet.** The synthetic demo only validates metric wiring and produces **illustrative** numbers under `configs/default.yaml`.
 
-| Model Size | Coverage (C) | Confidence (K) | Capability Retention |
-|------------|--------------|----------------|---------------------|
-| Small      | 71%          | 91%            | 91%                 |
-| Medium     | 54%          | 89%            | 86%                 |
-| Large      | 38%          | 84%            | 79%                 |
-
-We fit a correlation function \(K = g(\text{complexity}, C)\) through these results.
-
-## Current focus
-
-The current focus is on:
-- defining the hypothesis precisely,
-- building the first toy benchmark,
-- implementing the first measurement pipeline,
-- and producing a clean first result for the paper.
+Current focus after the scaffold:
+- implement `train_toy_model.py` + `interventions.py`,
+- freeze protocol parameters and log them with each run,
+- produce the first real **C** / **K** on a toy transformer under `hypothesis.md` criteria.
 
 ## Research style
 
 This repo is designed to support a serious research workflow:
-- theory first,
-- pre-registered hypotheses,
+- theory and pre-registration first,
+- explicit hypotheses and falsification-style criteria (`hypothesis.md`),
 - controlled experiments,
 - explicit metrics,
 - and evidence-driven iteration.
 
 ## References
 
-The project is informed by work in mechanistic interpretability, causal scrubbing, activation patching, representation engineering, ELK, learned optimization, and related alignment research.
-
-A full references list will be included in `paper/draft.md`.
+Background citations and a short bibliography are in **`pre-registration_paper.md`** (References section).
 
 ## License
 
