@@ -64,6 +64,7 @@ def measure_trial(
     tpos: int,
     dim: int,
     *,
+    ablation_coeff: float,
     device: torch.device,
 ) -> tuple[float, float]:
     """Returns (predicted_delta, observed_delta) on target logit for batch item 0."""
@@ -80,13 +81,16 @@ def measure_trial(
 
     h = resids[layer].detach()[b, tpos, dim]
     g = resids[layer].grad[b, tpos, dim] if resids[layer].grad is not None else torch.zeros_like(h)
-    pred = float((-h * g).item())
+    # Intervention: set h_dim -> ablation_coeff * h_dim (ablation_coeff=0 => zero-ablation).
+    # Activation-space delta is (h' - h) = (ablation_coeff - 1) * h.
+    delta_h = (float(ablation_coeff) - 1.0) * h
+    pred = float((delta_h * g).item())
 
     clean = float(scalar_logit(logits, b, p0, tgt0).detach().item())
 
     def ablate_hook(_m, _inp, out: torch.Tensor) -> torch.Tensor:
         o = out.clone()
-        o[b, tpos, dim] = 0
+        o[b, tpos, dim] = float(ablation_coeff) * o[b, tpos, dim]
         return o
 
     hnd = model.blocks[layer].register_forward_hook(ablate_hook)
@@ -118,6 +122,12 @@ def main() -> None:
         default=0.0,
         help="|observed Δlogit| ≥ ε to count as causally relevant (0 = off).",
     )
+    ap.add_argument(
+        "--ablation-coeff",
+        type=float,
+        default=0.0,
+        help="Set residual dimension to coeff * activation (0.0 = zero-ablation; -1.0 = flip sign).",
+    )
     ap.add_argument("--atol", type=float, default=0.6)
     ap.add_argument("--tau", type=float, default=0.5)
     ap.add_argument("--seed", type=int, default=0)
@@ -131,6 +141,7 @@ def main() -> None:
     tc = task_from_ckpt(meta, device)
     n_layer = len(model.blocks)
     d_model = model.cfg.d_model
+    n_params = sum(p.numel() for p in model.parameters())
 
     preds: list[float] = []
     obses: list[float] = []
@@ -149,7 +160,17 @@ def main() -> None:
         while len(bucket_pred) < args.dims_per_bucket and probes < args.max_probes_per_bucket:
             probes += 1
             dim = int(torch.randint(0, d_model, (1,), device=device).item())
-            pr, ob = measure_trial(model, inp, tgt, pos, layer, tpos, dim, device=device)
+            pr, ob = measure_trial(
+                model,
+                inp,
+                tgt,
+                pos,
+                layer,
+                tpos,
+                dim,
+                ablation_coeff=args.ablation_coeff,
+                device=device,
+            )
             if args.relevance_epsilon > 0 and abs(ob) < args.relevance_epsilon:
                 n_irrelevant += 1
                 continue
@@ -180,10 +201,12 @@ def main() -> None:
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "checkpoint": str(args.ckpt),
         "task": meta.get("task"),
+        "n_params": int(n_params),
         "trials": args.trials,
         "dims_per_bucket": args.dims_per_bucket,
         "max_probes_per_bucket": args.max_probes_per_bucket,
         "relevance_epsilon": args.relevance_epsilon,
+        "ablation_coeff": args.ablation_coeff,
         "atol": args.atol,
         "tau": args.tau,
         "seed": args.seed,

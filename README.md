@@ -78,6 +78,35 @@ The initial plan (see `hypothesis.md`) is:
 
 If these experiments produce strong signals, the same framework can be extended to richer settings.
 
+## Empirical illustration: modular TinyGPT scaling
+
+This section is **exploratory toy data** for the repo’s CPI tooling. It is **not** a substitute for claims in `pre-registration_paper.md` (which remains methodology-first). It shows how **K**, **C**, and **task accuracy** co-vary across model width when the **intervention protocol is held fixed** (`experiments/modular_scaling_sweep.py`: residual ablations, relevance ε, bucketed sampling as in `measure_cpi_toy.py`).
+
+**What “accuracy” means here.** Models are trained on **Nanda-style modular addition**: sample integers \(a, b \in \{0,\ldots,p-1\}\) with default **\(p = 97\)**, feed tokens \([a, b, '=']\), and train the network to predict **\(c = (a + b) \bmod p\)** as a **single next-token classification** over digit logits at the prediction position (see `experiments/tasks_toy.py`, `ModularConfig`). Reported **accuracy** is the fraction of **fresh samples** from that same generator for which the **argmax logit** at that position equals \(c\) (default eval: 32 batches × 256 examples after loading each checkpoint).
+
+**Why \(C\) can sit near zero while \(K_{\mathrm{global}}\) is nonzero.** Under `measure_cpi_toy.py`, **\(C\)** is the fraction of **coarse buckets** (each bucket aggregates several residual dimensions) whose **per-bucket** \(K\) clears a threshold **τ**. **\(K_{\mathrm{global}}\)** pools many single-dimension probes into one score. So low **\(C\)** is consistent with “almost no bucket looks uniformly well predicted under the strict atol,” even when some probes still match (nonzero global \(K\)). Better local linearization, attribution, or intervention alignment should raise **per-bucket** \(K\), which raises **\(C\)** for fixed **τ**—that is the intended improvement path for future methods.
+
+**Figures** (same run, fixed protocol; regenerate via `modular_scaling_sweep.py`):
+
+![K_global vs log10(parameters)](docs/figures/modular_k_vs_params.png)
+
+![Coverage C vs log10(parameters)](docs/figures/modular_c_vs_params.png)
+
+![Task accuracy vs log10(parameters)](docs/figures/modular_accuracy_vs_params.png)
+
+![Triptych: K, C, accuracy side by side](docs/figures/modular_scaling_triptych.png)
+
+*Regenerate (and add more widths) with:*
+
+```bash
+pip install -e ".[experiments,plots]"
+python experiments/modular_scaling_sweep.py --steps 4000 --seed 0
+# Redraw from existing summary JSON only:
+python experiments/modular_scaling_sweep.py --plot-only
+```
+
+The default width grid is **29** checkpoints (`d_model = 16, 20, \ldots, 128` in steps of 4). Use `--d-models …` for a faster subset. Summary JSON: `outputs/modular_scaling/modular_scaling_summary.json`.
+
 ## Code quickstart
 
 ```bash
@@ -96,6 +125,7 @@ python experiments/hf_cpi_probe.py --model gpt2 --prompts-file docs/sample_promp
 ```
 
 - **`docs/EXPERIMENTS.md`** — citations, Ollama vs HF, scaling ladder.
+- **`experiments/plot_cpi_summary.py`** — one-graph, four-stat summary from a CPI JSON artifact.
 - **`synthetic_demo.py`** — non-model metric sanity check only.
 - **`configs/default.yaml`** — synthetic demo knobs; training uses CLI args in `train_toy.py`.
 - **`docs/github-actions-ci.yml`** — CI template (needs PAT `workflow` scope to push under `.github/`).
@@ -114,6 +144,7 @@ python experiments/hf_cpi_probe.py --model gpt2 --prompts-file docs/sample_promp
 │   ├── confidence.py    # K (§6)
 │   └── coverage.py      # C (§7)
 ├── docs/
+│   ├── figures/         # e.g. modular_scaling_triptych.png (for README)
 │   ├── EXPERIMENTS.md
 │   └── github-actions-ci.yml
 ├── experiments/
@@ -123,6 +154,8 @@ python experiments/hf_cpi_probe.py --model gpt2 --prompts-file docs/sample_promp
 │   ├── train_toy.py
 │   ├── measure_cpi_toy.py
 │   ├── hf_cpi_probe.py
+│   ├── modular_scaling_sweep.py
+│   ├── plot_cpi_summary.py
 │   ├── plot_cpi_json.py
 │   ├── train_toy_model.py   # legacy stub
 │   └── interventions.py

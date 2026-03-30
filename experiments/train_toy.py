@@ -42,6 +42,10 @@ def main() -> None:
     p.add_argument("--steps", type=int, default=5000)
     p.add_argument("--batch", type=int, default=64)
     p.add_argument("--lr", type=float, default=3e-4)
+    p.add_argument("--n-layer", type=int, default=2)
+    p.add_argument("--n-head", type=int, default=4)
+    p.add_argument("--d-model", type=int, default=128)
+    p.add_argument("--d-mlp", type=int, default=256)
     p.add_argument("--prime-p", type=int, default=97, help="Modulus p (Nanda-style; often prime, e.g. 97 or 113).")
     p.add_argument("--out", type=Path, default=ROOT / "outputs" / "checkpoints" / "toy.pt")
     p.add_argument("--seed", type=int, default=0)
@@ -62,7 +66,17 @@ def main() -> None:
         max_len = 32
         cite = "Olsson et al. (2022), induction / repeated pattern"
 
-    cfg = TinyGPTConfig(vocab_size=vocab, max_seq_len=max_len, n_layer=2, n_head=4, d_model=128, d_mlp=256)
+    if args.d_model % args.n_head != 0:
+        raise SystemExit(f"--d-model ({args.d_model}) must be divisible by --n-head ({args.n_head})")
+
+    cfg = TinyGPTConfig(
+        vocab_size=vocab,
+        max_seq_len=max_len,
+        n_layer=args.n_layer,
+        n_head=args.n_head,
+        d_model=args.d_model,
+        d_mlp=args.d_mlp,
+    )
     model = TinyGPT(cfg).to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr)
 

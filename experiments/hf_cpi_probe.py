@@ -55,6 +55,7 @@ def measure_dim_ablation(
     pos: int,
     next_id: int,
     dim: int,
+    ablation_coeff: float,
     device_t: torch.device,
 ) -> tuple[float, float]:
     """First-order pred Δ and observed Δ on logit[0, pos, next_id]."""
@@ -82,16 +83,19 @@ def measure_dim_ablation(
 
     hvd = H.detach()[0, pos, dim]
     gvd = H.grad[0, pos, dim]
-    pred = float((-hvd * gvd).item())
+    # Intervention: set h_dim -> ablation_coeff * h_dim.
+    # Activation-space delta is (h' - h) = (ablation_coeff - 1) * h.
+    delta_h = (float(ablation_coeff) - 1.0) * hvd
+    pred = float((delta_h * gvd).item())
     clean = float(logits[0, pos, next_id].detach().item())
 
     def ablate_hook(_m, _inp, out):
         if isinstance(out, tuple):
             o0 = out[0].clone()
-            o0[0, pos, dim] = 0
+            o0[0, pos, dim] = float(ablation_coeff) * o0[0, pos, dim]
             return (o0,) + tuple(out[1:])
         o = out.clone()
-        o[0, pos, dim] = 0
+        o[0, pos, dim] = float(ablation_coeff) * o[0, pos, dim]
         return o
 
     h2 = blocks[layer].register_forward_hook(ablate_hook)
@@ -140,6 +144,12 @@ def main() -> None:
         type=float,
         default=0.0,
         help="|observed Δlogit| must be ≥ this to count as causally relevant (0 = disable filter).",
+    )
+    ap.add_argument(
+        "--ablation-coeff",
+        type=float,
+        default=0.0,
+        help="Set residual dimension to coeff * activation (0.0 = zero-ablation; -1.0 = flip sign).",
     )
     ap.add_argument("--atol", type=float, default=1.0, help="Tolerance for K (pred vs obs).")
     ap.add_argument("--tau", type=float, default=0.5, help="Coverage threshold τ on per-bucket K.")
@@ -205,7 +215,15 @@ def main() -> None:
             probes += 1
             dim = int(torch.randint(0, d_model, (1,), device=device_t).item())
             pred, obs = measure_dim_ablation(
-                model, blocks, layer, inputs, pos, next_id, dim, device_t
+                model,
+                blocks,
+                layer,
+                inputs,
+                pos,
+                next_id,
+                dim,
+                ablation_coeff=args.ablation_coeff,
+                device_t=device_t,
             )
             if pred != pred or obs != obs:
                 continue
@@ -258,6 +276,7 @@ def main() -> None:
         "dims_per_bucket": args.dims_per_bucket,
         "max_probes_per_bucket": args.max_probes_per_bucket,
         "relevance_epsilon": args.relevance_epsilon,
+        "ablation_coeff": args.ablation_coeff,
         "atol": args.atol,
         "tau": args.tau,
         "seed": args.seed,
