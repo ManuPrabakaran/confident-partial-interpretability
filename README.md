@@ -8,7 +8,7 @@ This repository currently contains:
 - **`pre-registration_paper.md`** — full CPI framework, measurement methodology, limits of the claims, and a **testable** interpretability scaling-law conjecture (no empirical results reported).
 - **`hypothesis.md`** — compact pre-experiment predictions, pipeline sketch, and success/failure criteria (**no scaling law assumed a priori** for those gates; no results claimed).
 
-The repo includes **measurement scaffolding** (`metrics/`, `configs/`, `experiments/synthetic_demo.py`) plus **CI**; real model training and interventions are stubbed for the next implementation pass.
+The repo includes **measurement scaffolding** (`metrics/`, `configs/`, `experiments/synthetic_demo.py`). A GitHub Actions workflow template lives in **`docs/github-actions-ci.yml`** (copy to `.github/workflows/ci.yml` after your PAT has the **`workflow`** scope, or add it via the Actions tab). Real model training and interventions are stubbed for the next implementation pass.
 
 ## Thesis
 
@@ -90,7 +90,7 @@ python experiments/synthetic_demo.py
 
 - **`synthetic_demo.py`** — end-to-end **toy** run: simulates intervention predictions vs “true” effects, writes `outputs/synthetic_demo.json`. The JSON includes an explicit **synthetic** disclaimer; it is **not** an empirical CPI result.
 - **`configs/default.yaml`** — protocol knobs (τ, atol, sample counts) to freeze when you run real experiments.
-- **`.github/workflows/ci.yml`** — installs the package, runs **pytest**, runs the synthetic demo.
+- **`docs/github-actions-ci.yml`** — template for CI (install, **pytest**, synthetic demo); not active on GitHub until you add it under `.github/workflows/` with appropriate credentials.
 
 ## Repository layout
 
@@ -112,8 +112,8 @@ python experiments/synthetic_demo.py
 ├── tests/
 │   └── test_metrics.py
 ├── outputs/             # run artifacts (json gitignored)
-└── .github/workflows/
-    └── ci.yml
+└── docs/
+    └── github-actions-ci.yml   # CI template (optional)
 ```
 
 ## File roles
