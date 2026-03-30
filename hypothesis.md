@@ -154,20 +154,35 @@ CPI's claims are deliberately falsifiable. Failure occurs if: (1) confidence fai
 References
 
 Nanda et al., Transformer Circuits (2022)
+
 Elhage et al., Superposition Hypothesis (2022)
+
 Causal Scrubbing (2022)
+
 Representation Engineering (2025)
+
 Steering Vectors (2025)
+
 Safe Exploration through Shielding (2020)
+
 Attribution Patching (2023)
+
 LASR Feature Absorption (NeurIPS 2025)
+
 Polysemanticity work
+
 Risks from Learned Optimization (Hubinger et al.)
+
 ELK Technical Report (ARC, 2021)
+
 Eliciting Latent Knowledge (Christiano)
+
 RepE Introduction (2024)
+
 Activation Patching Guide (2024)
+
 Causal Scrubbing paper
+
 Recent mech interp scaling
 
 ## Pre-registration Commitment
