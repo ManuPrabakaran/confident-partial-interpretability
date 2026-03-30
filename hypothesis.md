@@ -1,5 +1,21 @@
 # CPI Pre-Experiment Hypotheses
 
+## Novel thesis: interpretability scaling laws
+
+The **central novel conjecture** in this research program is an **interpretability scaling law**: as **effective complexity** of the model (and its representation under the task distribution) grows, **coverage (C)** and **confidence (K)** need not stay high—they are hypothesized to **degrade along predictable curves**, analogous in spirit to capability scaling laws.
+
+Concretely (aligned with `pre-registration_paper.md` §11):
+
+- **C ∼ f₁(dim_eff)** and **K ∼ f₂(dim_eff)**  
+- **dim_eff** denotes effective dimensionality of the activation manifold under task distribution **D** (not raw parameter count alone).  
+- Candidate shapes (power-law decay, log-linear decay, etc.) are **empirical questions** to be fit after measuring **C** and **K** across controlled scaling ladders.
+
+**Why it matters.** If such relationships hold, one could **forecast** how much interpretability to expect at a given scale and frame **tradeoffs** between capability and CPI-style monitoring. Full methodology and limits are in the pre-registration paper; this file states the hypothesis for the **pre-experiment** program.
+
+**How we test it (high level).** Train or obtain models across a scaling axis (width, depth, data, or estimated **dim_eff**), hold the **CPI measurement protocol** as fixed as possible, sample states, estimate **C** and **K**, then fit and stress-test **f₁**, **f₂**.
+
+---
+
 ## Core Hypothesis
 
 Confident Partial Interpretability (CPI) is a measurement and control framework for turning partial mechanistic interpretability into practical runtime safety constraints.
@@ -95,6 +111,6 @@ Capability retention is not assumed.
 
 ## Notes
 
-- No scaling law is assumed a priori  
-- No results are claimed  
-- This document is a pre-registration of the experimental program  
+- The scaling-law conjecture is **not** assumed when judging Predictions 1–3 above: those gates ask whether **K** and **C** are measurable and useful **before** we commit to a particular **f₁**, **f₂**.  
+- No results are claimed in this document.  
+- Full pre-registration (methodology, enforcement sketch, scaling section): `pre-registration_paper.md`  
