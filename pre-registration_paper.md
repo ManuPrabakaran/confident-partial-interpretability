@@ -331,7 +331,35 @@ As interpretability methods improve, K approaches a ceiling on the covered domai
 
 This document pre-registers the CPI framework, measurement methodology, and scaling-law hypothesis prior to empirical validation.
 
-No empirical results are reported.
+No empirical results are reported in the pre-registration portion. The addendum below reports exploratory post-registration toy findings from March 30, 2026.
+
+---
+
+## 15. Exploratory Empirical Findings (Toy Scaling Sweep, March 30, 2026)
+
+We evaluated CPI metrics on a modular TinyGPT scaling sweep under a fixed, protocol-defined intervention and relevance scheme. The task was Nanda-style modular addition, where input tokens \([a, b, '=']\) are provided and the model is trained to predict \(c = (a+b)\bmod 97\) at the designated prediction position. For each model width, we computed interpretability confidence \(K_{\mathrm{global}}\) and coverage \(C\) from CPI-style residual interventions and a relevance filter set by observed causal logit-change magnitude, using bucketed relevance with \(\mathrm{dims\_per\_bucket}=5\). Accuracy was measured on fresh samples from the same task generator, using the default evaluation setting of 32 batches of 256 examples per checkpoint.
+
+Results reported here correspond to measurements performed on March 30, 2026, under the following fixed protocol choices: eight width settings spanning log10(parameter count) of approximately 4.37 to 5.46, training steps of 4000 per checkpoint, \(\tau=0.6\), \(\mathrm{atol}=0.01\), ablation coefficient of \(-5\), relevance \(\varepsilon=0.02\), and bucketed relevance with \(\mathrm{dims\_per\_bucket}=5\).
+
+Across the eight checkpoints, confidence \(K_{\mathrm{global}}\) ranged from 0.02 to 0.27, while coverage \(C\) ranged from 0 to 0.21, with multiple widths yielding \(C=0\) under the chosen bucket-level thresholding policy. Task accuracy increased from approximately 0.0085 to 1.0 over the sweep. Pearson correlations computed across the eight checkpoints showed a negative relationship between scale and both interpretability metrics: the correlation between log10(params) and \(K_{\mathrm{global}}\) was approximately −0.81, and between log10(params) and \(C\) was approximately −0.75. Accuracy increased with scale, with log10(params) versus accuracy yielding approximately +0.93. The same sign pattern held in pairwise associations between capability and interpretability: accuracy versus \(K_{\mathrm{global}}\) was approximately −0.66, and accuracy versus \(C\) was approximately −0.59.
+
+These observed scaling trends therefore indicate a negative relationship between CPI interpretability metrics and model size within this fixed protocol. Accuracy increased strongly with model size, while \(K_{\mathrm{global}}\) and \(C\) decreased. Notably, this includes a decoupling between capability and interpretability metrics: for checkpoints where task accuracy approached 100 percent, \(K_{\mathrm{global}}\) remained far from 1.0 and coverage frequently remained at or near zero. This phenomenon constitutes an observed decoupling between capability and interpretability within the measured regime under the present intervention and thresholding scheme.
+
+Coverage behavior should be interpreted in light of the metric definition and the discretization induced by the bucketing and thresholding procedure. By construction, \(C\) counts the fraction of causally relevant state buckets whose bucket-level \(K\) exceeds the threshold \(\tau\). The fact that \(C\) is often exactly zero does not imply that there is no interpretable signal. Instead, it indicates that bucket-level scores did not cross the threshold under coarse bucket aggregation and a strict tolerance \(\mathrm{atol}=0.01\), even when some probes contributed to a nonzero \(K_{\mathrm{global}}\). Importantly, \(K_{\mathrm{global}}\) remained nonzero on checkpoints where \(C=0\), reflecting that global aggregation across single-dimension probes can yield measurable agreement with observed intervention effects even when no coarse bucket satisfies the bucket-threshold policy.
+
+With respect to the interpretability scaling law hypothesis, these March 30 observations are qualitatively consistent with the conjecture that \(C\) and \(K\) degrade with increasing effective complexity. This analysis does not provide evidence for any specific functional form or for generality beyond the measured regime and protocol. The interpretation is therefore restricted to protocol-conditional observational consistency rather than proof of a universal scaling law.
+
+These findings remain subject to significant limitations. The results are protocol-dependent and conditional on fixed choices including intervention strength via the ablation coefficient, relevance filtering via \(\varepsilon\), bucketing with \(\mathrm{dims\_per\_bucket}=5\), and strict tolerances \(\mathrm{atol}=0.01\) and \(\tau=0.6\). The sweep covers a small model regime and uses a fixed training step budget of 4000, so variations in training dynamics or evaluation settings could alter quantitative relationships. More experimentation, including additional scaling ladders and protocol ablations designed to assess sensitivity of bucket-level agreement, is therefore required to establish stronger and more firm empirical claims.
+
+In the direction suggested by the metric construction, improving local attribution or improving intervention alignment may increase per-bucket \(K\) and therefore increase \(C\) under the same threshold policy. This is an empirical direction for future work rather than a conclusion drawn from the current sweep.
+
+### Figures
+
+![Confidence \(K_{\mathrm{global}}\) versus log10(parameter count)](docs/figures/modular_k_vs_params.png)
+
+![Coverage \(C\) versus log10(parameter count)](docs/figures/modular_c_vs_params.png)
+
+![Task accuracy versus log10(parameter count)](docs/figures/modular_accuracy_vs_params.png)
 
 ---
 
