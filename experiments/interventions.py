@@ -1,10 +1,11 @@
 """
 Causal interventions (ablation, patching, steering) on model internals.
 
-This module will wrap forward hooks and batch evaluation. See
-pre-registration_paper.md §5–6 and hypothesis.md (measurement pipeline).
+Concrete ablations for CPI metrics live in:
+- ``experiments/measure_cpi_toy.py`` — residual zero-ablation + gradient Δ on TinyGPT.
+- ``experiments/hf_cpi_probe.py`` — same pattern on Hugging Face GPT-2–style blocks.
 
-Not implemented yet.
+See pre-registration_paper.md §5–6 and hypothesis.md (measurement pipeline).
 """
 
 from __future__ import annotations
@@ -24,4 +25,4 @@ def run_intervention_batch(
     layer: int,
     intervention_fn: Callable[..., Any],
 ) -> None:
-    raise NotImplementedError("Hook-based interventions — implement after toy model lands.")
+    raise NotImplementedError("Use measure_cpi_toy.py / hf_cpi_probe.py for batched CPI runs.")

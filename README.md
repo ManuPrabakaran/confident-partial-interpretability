@@ -8,7 +8,7 @@ This repository currently contains:
 - **`pre-registration_paper.md`** — full CPI framework, measurement methodology, limits of the claims, and a **testable** interpretability scaling-law conjecture (no empirical results reported).
 - **`hypothesis.md`** — compact pre-experiment predictions, pipeline sketch, and success/failure criteria (**no scaling law assumed a priori** for those gates; no results claimed).
 
-The repo includes **measurement scaffolding** (`metrics/`, `configs/`, `experiments/synthetic_demo.py`). A GitHub Actions workflow template lives in **`docs/github-actions-ci.yml`** (copy to `.github/workflows/ci.yml` after your PAT has the **`workflow`** scope, or add it via the Actions tab). Real model training and interventions are stubbed for the next implementation pass.
+The repo includes **metric code** (`metrics/`), **configs**, **`experiments/synthetic_demo.py`**, and **PyTorch experiments** (install `pip install -e ".[experiments]"`): **modular addition** (Nanda et al., 2023), **induction** (Olsson et al., 2022), **`measure_cpi_toy.py`**, and **`hf_cpi_probe.py`** for Hugging Face LMs (Ollama does not expose residuals for CPI-style hooks — see **`docs/EXPERIMENTS.md`**). A GitHub Actions workflow template lives in **`docs/github-actions-ci.yml`**.
 
 ## Thesis
 
@@ -83,14 +83,22 @@ If these experiments produce strong signals, the same framework can be extended 
 ```bash
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"
+pip install -e ".[dev,experiments]"
 pytest -q
 python experiments/synthetic_demo.py
+# Nanda-style modular addition → checkpoint → CPI metrics (K, C)
+python experiments/train_toy.py --task modular --steps 8000 --out outputs/checkpoints/modular.pt
+python experiments/measure_cpi_toy.py --ckpt outputs/checkpoints/modular.pt
+# Induction (Olsson-style minimal task)
+python experiments/train_toy.py --task induction --steps 12000 --out outputs/checkpoints/induction.pt
+# Larger introspectable LM (HF): relevance ε, bucketed C, logged protocol
+python experiments/hf_cpi_probe.py --model gpt2 --prompts-file docs/sample_prompts.txt --n-buckets 15 --dims-per-bucket 5 --relevance-epsilon 0.02 --atol 0.5 --tau 0.6
 ```
 
-- **`synthetic_demo.py`** — end-to-end **toy** run: simulates intervention predictions vs “true” effects, writes `outputs/synthetic_demo.json`. The JSON includes an explicit **synthetic** disclaimer; it is **not** an empirical CPI result.
-- **`configs/default.yaml`** — protocol knobs (τ, atol, sample counts) to freeze when you run real experiments.
-- **`docs/github-actions-ci.yml`** — template for CI (install, **pytest**, synthetic demo); not active on GitHub until you add it under `.github/workflows/` with appropriate credentials.
+- **`docs/EXPERIMENTS.md`** — citations, Ollama vs HF, scaling ladder.
+- **`synthetic_demo.py`** — non-model metric sanity check only.
+- **`configs/default.yaml`** — synthetic demo knobs; training uses CLI args in `train_toy.py`.
+- **`docs/github-actions-ci.yml`** — CI template (needs PAT `workflow` scope to push under `.github/`).
 
 ## Repository layout
 
@@ -105,15 +113,22 @@ python experiments/synthetic_demo.py
 ├── metrics/
 │   ├── confidence.py    # K (§6)
 │   └── coverage.py      # C (§7)
+├── docs/
+│   ├── EXPERIMENTS.md
+│   └── github-actions-ci.yml
 ├── experiments/
 │   ├── synthetic_demo.py
-│   ├── train_toy_model.py   # stub
-│   └── interventions.py     # stub
+│   ├── tiny_gpt.py
+│   ├── tasks_toy.py
+│   ├── train_toy.py
+│   ├── measure_cpi_toy.py
+│   ├── hf_cpi_probe.py
+│   ├── plot_cpi_json.py
+│   ├── train_toy_model.py   # legacy stub
+│   └── interventions.py
 ├── tests/
 │   └── test_metrics.py
-├── outputs/             # run artifacts (json gitignored)
-└── docs/
-    └── github-actions-ci.yml   # CI template (optional)
+└── outputs/             # json + checkpoints (gitignored)
 ```
 
 ## File roles
@@ -122,7 +137,10 @@ python experiments/synthetic_demo.py
 - **`hypothesis.md`** — pre-experiment predictions, validation criteria (**success if any** / **failure if all**), and explicit note that **no results are claimed** there.
 - **`pre-registration_paper.md`** — full CPI pre-registration: metrics, methodology, enforcement sketch, scaling-law hypothesis, and references.
 - **`metrics/`** — reference implementations of **K** and **C** matching the paper’s definitions (extend for your divergence metric of choice).
-- **`experiments/synthetic_demo.py`** — sanity-check the metric pipeline before PyTorch work exists.
+- **`experiments/synthetic_demo.py`** — non-model metric sanity check.
+- **`experiments/train_toy.py` / `measure_cpi_toy.py`** — TinyGPT + modular (Nanda) / induction (Olsson); **K** and **C** from gradient Δ vs ablation.
+- **`experiments/hf_cpi_probe.py`** — same **K** idea on HF GPT-2–style stacks.
+- **`docs/EXPERIMENTS.md`** — full citation list and Ollama vs HF note.
 
 ## What counts as success
 
@@ -150,12 +168,7 @@ That distinction matters because it turns a vague safety aspiration into a testa
 
 ## Status
 
-**No empirical results on real models are reported yet.** The synthetic demo only validates metric wiring and produces **illustrative** numbers under `configs/default.yaml`.
-
-Current focus after the scaffold:
-- implement `train_toy_model.py` + `interventions.py`,
-- freeze protocol parameters and log them with each run,
-- produce the first real **C** / **K** on a toy transformer under `hypothesis.md` criteria.
+**Empirical runs are tooling-first:** train a checkpoint with `train_toy.py`, then `measure_cpi_toy.py` writes JSON under `outputs/` (gitignored). Treat numbers as **protocol-dependent** until you freeze atol/τ/sampling and train to convergence (modular addition often needs thousands of steps; see Nanda et al., 2023). **Ollama** is not used for CPI hooks — use **HF** models or TransformerLens/nnsight for tensor access (`docs/EXPERIMENTS.md`).
 
 ## Research style
 

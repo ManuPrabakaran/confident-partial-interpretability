@@ -17,6 +17,13 @@ dependencies = [
 dev = [
     "pytest>=7.0",
 ]
+experiments = [
+    "torch>=2.0",
+    "transformers>=4.36",
+]
+plots = [
+    "matplotlib>=3.7",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]

@@ -9,3 +9,4 @@ build/
 
 # Generated run artifacts (keep directory via .gitkeep)
 outputs/*.json
+outputs/checkpoints/*.pt
